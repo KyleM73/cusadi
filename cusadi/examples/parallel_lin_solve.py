@@ -8,15 +8,14 @@ ROOT_DIR = os.path.dirname(EXAMPLES_DIR)
 sys.path.append(ROOT_DIR)
 
 import torch
-from casadi import *
 import numpy as np
 import random
 import time
-from src import *
+import casadi as ca
+import cusadi as cu
 import cvxpy as cp
 
-from src import CusadiFunction  # Make sure CusadiFunction is accessible
-device = 'cuda'
+device = "cuda"
 dtype = torch.double
 
 # =================== Initialize the problem ===================
@@ -34,8 +33,8 @@ for i in range(NENV):
     lin_problems.append((A_i, B_i))
 
 # solve using np.linalg.solve
-lin_solve = Function.load(os.path.join(CUSADI_FUNCTION_DIR, "fn_lin_solve.casadi"))
-fn_cusadi_lin_solve = CusadiFunction(lin_solve, NENV)
+lin_solve = ca.Function.load(os.path.join(cu.CUSADI_FUNCTION_DIR, "fn_lin_solve.casadi"))
+fn_cusadi_lin_solve = cu.CusadiFunction(lin_solve, NENV)
 
 # =================== Solve the problem using cusadi ===================
 def parallel_lin_solve():

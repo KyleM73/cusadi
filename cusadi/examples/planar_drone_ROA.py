@@ -5,12 +5,12 @@ sys.path.append(ROOT_DIR)
 
 import torch
 import scipy
-from cusadi import *
-from casadi import *
+import casadi as ca
+import cusadi as cu
 
 N_ENVS = 30000
-fn_drone_ROA = casadi.Function.load(os.path.join(CUSADI_FUNCTION_DIR, "drone_sim_LQR_ROA.casadi"))
-step_drone_ROA = CusadiFunction(fn_drone_ROA, N_ENVS)
+fn_drone_ROA = ca.Function.load(os.path.join(cu.CUSADI_FUNCTION_DIR, "drone_sim_LQR_ROA.casadi"))
+step_drone_ROA = cu.CusadiFunction(fn_drone_ROA, N_ENVS)
 
 t_start = 0
 t_end = 10
@@ -22,21 +22,21 @@ data_MATLAB = {}
 data_MATLAB["t"] = t.cpu().numpy()
 
 # State: [x, y, theta, x_dot, y_dot, theta_dot]
-tmp = torch.ones((N_ENVS, 1), device='cuda', dtype=torch.float32)
+tmp = torch.ones((N_ENVS, 1), device="cuda", dtype=torch.float32)
 F_lim_sweep = [10*tmp, 20*tmp, 30*tmp, 40*tmp, 50*tmp]
 v_max = 20
 omega_max = 5
 
 for k in range(len(F_lim_sweep)):
     data_traj = {}
-    trajectory_tensor = torch.zeros((N_steps, N_ENVS, 6), device='cuda', dtype=torch.float32)
-    omg_mag = omega_max * (2*torch.rand((N_ENVS, 1), device='cuda', dtype=torch.float32) - 1)
-    vel_angle = torch.pi * (2*torch.rand((N_ENVS, 1), device='cuda', dtype=torch.float32) - 1)
-    vel_mag = v_max * (2*torch.rand((N_ENVS, 1), device='cuda', dtype=torch.float32) - 1)
+    trajectory_tensor = torch.zeros((N_steps, N_ENVS, 6), device="cuda", dtype=torch.float32)
+    omg_mag = omega_max * (2*torch.rand((N_ENVS, 1), device="cuda", dtype=torch.float32) - 1)
+    vel_angle = torch.pi * (2*torch.rand((N_ENVS, 1), device="cuda", dtype=torch.float32) - 1)
+    vel_mag = v_max * (2*torch.rand((N_ENVS, 1), device="cuda", dtype=torch.float32) - 1)
     v_x = vel_mag * torch.cos(vel_angle)
     v_y = vel_mag * torch.sin(vel_angle)
     initial_state_tensor = torch.hstack([
-        torch.zeros((N_ENVS, 3), device='cuda', dtype=torch.float32),
+        torch.zeros((N_ENVS, 3), device="cuda", dtype=torch.float32),
         v_x, v_y, omg_mag])
     state_tensor = initial_state_tensor.clone()
     trajectory_tensor[0, :, :] = state_tensor
@@ -60,4 +60,4 @@ for k in range(len(F_lim_sweep)):
     data_traj["failures"] = failures.cpu().numpy()
     data_MATLAB[f"F_lim_{k}"] = data_traj
 
-scipy.io.savemat(f"{CUSADI_DATA_DIR}/drone_ROA_data.mat", data_MATLAB)
+scipy.io.savemat(f"{cu.CUSADI_DATA_DIR}/drone_ROA_data.mat", data_MATLAB)

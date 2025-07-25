@@ -1,5 +1,23 @@
-# Notes
-may need `sudo apt install nvidia-cuda-toolkit`
+# HCRL CusADi
+Forked from https://github.com/se-hwan/cusadi
+
+Make sure nvidia cuda toolkit (`nvcc --version`) and driver (`nvidia-smi`) match cuda versions. If not:
+```bash
+sudo apt remove --purge nvidia-cuda-toolkit
+sudo apt autoremove
+sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
+sudo sh -c 'echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/cuda.list'
+sudo apt update
+sudo apt install cuda-12-8
+```
+Change ubuntu version and cuda version as needed.
+
+add to bashrc: 
+```bash
+  export PATH="/usr/local/cuda-12.3/bin:$PATH"
+  export LD_LIBRARY_PATH="/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH"
+```
+and then `source ~/.bashrc`.
 
 <a id="readme-top"></a>
 
@@ -178,20 +196,20 @@ Benchmarks show that `cusadi` offers significant speedups, especially for reinfo
     ```
 
 3. Evaluate the parallelized functions with `cusadi` in PyTorch
-    ```
+    ```python
     import torch
-    from cusadi import *
-    from casadi import *
+    import casadi as ca
+    import cusadi as cu
 
     BATCH_SIZE = 10000
 
-    x0 = torch.rand((BATCH_SIZE, 2), device='cuda', dtype=torch.double)                 # Random initial states
-    g = 9.81 * torch.ones((BATCH_SIZE, 1), device='cuda', dtype=torch.double)           # Gravity for each env.
-    l = torch.rand((BATCH_SIZE, 1), device='cuda', dtype=torch.double)                  # Random lengths for each env.
+    x0 = torch.rand((BATCH_SIZE, 2), device="cuda", dtype=torch.double)                 # Random initial states
+    g = 9.81 * torch.ones((BATCH_SIZE, 1), device="cuda", dtype=torch.double)           # Gravity for each env.
+    l = torch.rand((BATCH_SIZE, 1), device="cuda", dtype=torch.double)                  # Random lengths for each env.
     dt = torch.linspace(0.001, 0.1, BATCH_SIZE, device='cuda', dtype=torch.double)      # Varying timestep for each env.
 
-    fn_casadi_sim_step = casadi.Function.load(os.path.join(CUSADI_FUNCTION_DIR, "fn_sim_step.casadi"))
-    fn_cusadi_sim_step = CusadiFunction(fn_casadi_sim_step, BATCH_SIZE)
+    fn_casadi_sim_step = ca.Function.load(os.path.join(cu.CUSADI_FUNCTION_DIR, "fn_sim_step.casadi"))
+    fn_cusadi_sim_step = cu.CusadiFunction(fn_casadi_sim_step, BATCH_SIZE)
     fn_cusadi_sim_step.evaluate(x0, g, l, dt)           # Evaluate fn. with CUDA kernel 
     x_next = fn_cusadi_sim_step.outputs_sparse[0]       # Access results.
     ```

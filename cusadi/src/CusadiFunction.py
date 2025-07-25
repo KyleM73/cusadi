@@ -1,6 +1,7 @@
+import os
+import sys
 import torch
 import ctypes
-from casadi import *
 from cusadi import CUSADI_BUILD_DIR
 
 class CusadiFunction:

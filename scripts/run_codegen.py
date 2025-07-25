@@ -35,7 +35,7 @@ def main(args):
 # Helper functions
 def compileCUDACode():
     print("Compiling CUDA code...")
-    status = os.system(f"cd {cu.CUSADI_ROOT_DIR} && mkdir -p build && cd build && cmake .. && make -j")
+    status = os.system(f"cd {cu.CUSADI_ROOT_DIR} && rm -rf build && mkdir -p build && cd build && cmake .. && make -j")
     if status == 0:
         print("Compilation complete.")
     else:

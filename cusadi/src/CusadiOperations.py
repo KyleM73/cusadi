@@ -7,7 +7,14 @@
 #   export PATH="/usr/local/cuda-12.3/bin:$PATH"
 #   export LD_LIBRARY_PATH="/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH"
 
-from casadi import *
+from casadi import (
+    OP_ASSIGN, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_NEG, OP_EXP, OP_LOG, OP_POW,
+    OP_CONSTPOW, OP_SQRT, OP_SQ, OP_TWICE, OP_SIN, OP_COS, OP_TAN, OP_ASIN,
+    OP_ACOS, OP_ATAN, OP_LT, OP_LE, OP_EQ, OP_NE, OP_NOT, OP_AND, OP_OR,
+    OP_FLOOR, OP_CEIL, OP_FMOD, OP_FABS, OP_SIGN, OP_COPYSIGN, OP_IF_ELSE_ZERO,
+    OP_ERF, OP_FMIN, OP_FMAX, OP_INV, OP_SINH, OP_COSH, OP_TANH, OP_ASINH,
+    OP_ACOSH, OP_ATANH, OP_ATAN2, OP_CONST, OP_INPUT, OP_OUTPUT
+)
 
 OP_CUDA_DICT_ORIG = {
     OP_ASSIGN:              "\n        work[idx * n_w + %d] = work[idx * n_w + %d];",
