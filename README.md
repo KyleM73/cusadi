@@ -187,7 +187,7 @@ Benchmarks show that `cusadi` offers significant speedups, especially for reinfo
         fn_sim_step.save('fn_sim_step.casadi')
         fn_jacobian.save('fn_jacobian.casadi')
         ```
-2. Move the saved functions to `src/casadi_functions` of the `cusadi` directory.
+2. Move the saved functions to `source/casadi_functions` of the `cusadi` directory.
 2. Compile the functions for parallelization. From the root directory of `cusadi`:
     ```
     python run_codegen.py --fn=fn_dynamics
