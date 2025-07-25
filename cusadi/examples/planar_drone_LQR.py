@@ -6,7 +6,7 @@ sys.path.append(ROOT_DIR)
 import torch
 import scipy
 import math
-from src import *
+from cusadi import *
 from casadi import *
 import matplotlib.pyplot as plt
 

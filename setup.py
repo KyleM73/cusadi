@@ -1,28 +1,43 @@
-from setuptools import setup, find_packages
+"""Installation script for the 'cusadi' python package."""
 
+import os
+import toml
+
+from setuptools import setup
+
+# Obtain the extension data from the extension.toml file
+EXTENSION_PATH = os.path.dirname(os.path.realpath(__file__))
+# Read the extension.toml file
+EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extension.toml"))
+
+# Minimum dependencies required prior to installation
+INSTALL_REQUIRES = [
+    'casadi',
+    'numpy',
+    'matplotlib',
+    'torch',
+]
+
+# Installation operation
 setup(
     name="cusadi",
-    version="0.1.0",
-    description="A library for generating and compiling Casadi functions with GPU support.",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
-    author="Se Hwan Jeon",
-    author_email="sehwan@mit.edu",
-    url="https://github.com/se-hwan/cusadi",
-    packages=find_packages(),
-    # package_data={'test': ['test.txt']},
+    packages=["cusadi"],
+    author=EXTENSION_TOML_DATA["package"]["author"],
+    maintainer=EXTENSION_TOML_DATA["package"]["maintainer"],
+    maintainer_email=EXTENSION_TOML_DATA["package"]["maintainer_email"],
+    url=EXTENSION_TOML_DATA["package"]["repository"],
+    version=EXTENSION_TOML_DATA["package"]["version"],
+    description=EXTENSION_TOML_DATA["package"]["description"],
+    keywords=EXTENSION_TOML_DATA["package"]["keywords"],
+    install_requires=INSTALL_REQUIRES,
+    license="MIT",
     include_package_data=True,
+    python_requires=">=3.6",
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3.10",
+        "Isaac Sim :: 5.0",
+        "Isaac Sim :: 4.5",
     ],
-    python_requires='>=3.6',
-    install_requires=[
-        'casadi',
-        'numpy',
-        'matplotlib',
-        'torch'
-    ],
-    setup_requires=['setuptools'],
+    zip_safe=False,
 )

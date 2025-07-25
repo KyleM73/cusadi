@@ -5,7 +5,7 @@ sys.path.append(ROOT_DIR)
 
 import torch
 import scipy
-from src import *
+from cusadi import *
 from casadi import *
 
 N_ENVS = 30000

@@ -4,7 +4,8 @@ import time
 import numpy as np
 import scipy
 from casadi import *
-from src import *
+import casadi
+from cusadi import *
 import subprocess
 
 REBUILD_CUDA_CODEGEN = True

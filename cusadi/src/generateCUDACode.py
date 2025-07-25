@@ -1,6 +1,8 @@
 import textwrap
 from casadi import *
-from src import *
+from cusadi import *
+from cusadi.src import OP_CUDA_DICT
+import cusadi
 
 def generateCMakeLists(casadi_fns):
     cmake_filepath = os.path.join(CUSADI_ROOT_DIR, "CMakeLists.txt")
