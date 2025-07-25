@@ -1,22 +1,23 @@
 import os
 import argparse
+import numpy as np
 import torch
-from casadi import *
-import cusadi
-from cusadi import *
+import casadi as ca
+import cusadi as cu
 
 
 def main(args):
-    fn_filepath = os.path.join(CUSADI_FUNCTION_DIR, f"{args.fn_name}.casadi")
-    f = casadi.Function.load(fn_filepath)
+    fn_filepath = os.path.join(cu.CUSADI_FUNCTION_DIR, f"{args.fn_name}.casadi")
+    f = ca.Function.load(fn_filepath)
     print("Evaluating function:", f.name())
     print("Function has %d arguments" % f.n_in())
     print("Function has %d outputs" % f.n_out())
 
     input_tensors = [torch.rand(args.n_envs, f.nnz_in(i), device='cuda', dtype=torch.double).contiguous()
                      for i in range(f.n_in())]
-
-    fn_cusadi = CusadiFunction(f, args.n_envs)
+    print("Argument dimensions: ", [f.nnz_in(i) for i in range(f.n_in())])
+    print("Output dimensions: ", [f.nnz_out(i) for i in range(f.n_out())])
+    fn_cusadi = cu.CusadiFunction(f, args.n_envs)
     import time
     start = time.perf_counter_ns()
     fn_cusadi.evaluate(input_tensors)
@@ -25,7 +26,7 @@ def main(args):
     print(f"Time taken to evaluate {args.n_envs} environments: {(end-start)/1e9:.6f} seconds")
     print("Time eval out: ", fn_cusadi.eval_time)
 
-    output_numpy = [numpy.zeros((args.n_envs, f.nnz_out(i))) for i in range(f.n_out())]
+    output_numpy = [np.zeros((args.n_envs, f.nnz_out(i))) for i in range(f.n_out())]
     for n in range(args.n_envs):
         inputs_np = [input_tensors[i][n, :].cpu().numpy() for i in range(f.n_in())]
         for i in range(f.n_out()):
@@ -34,7 +35,7 @@ def main(args):
     print(f"Evaluating with {args.n_envs} environments.")
     print(f"Average error for each environment:")
     for i in range(f.n_out()):
-        error_norm = numpy.linalg.norm(fn_cusadi.outputs_sparse[i].cpu().numpy() - output_numpy[i])/args.n_envs
+        error_norm = np.linalg.norm(fn_cusadi.outputs_sparse[i].cpu().numpy() - output_numpy[i])/args.n_envs
         print(f"Output {i} error norm:", error_norm)
 
 def printParserArguments(parser, args):

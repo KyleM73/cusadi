@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
-project(CusADi)
+project(CusADi CXX CUDA)
 
 # Find CUDA package
 include(CheckLanguage)
 check_language(CUDA)
-find_package(CUDAToolkit REQUIRED)
 if(CMAKE_CUDA_COMPILER)
 enable_language(CUDA)
 include_directories(${CUDA_INCLUDE_DIRS})
@@ -13,13 +12,13 @@ endif()
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75 86)
 endif()
-message(${CMAKE_CUDA_ARCHITECTURES})
+message("CUDA Architectures: " ${CMAKE_CUDA_ARCHITECTURES})
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 11)
 
 # Set CUDA flags
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -arch=sm_86 --use_fast_math)  # Adjust architecture as needed
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -arch=native --use_fast_math)  # Adjust architecture as needed
 
 set(INERTIAL_QUANTITIES_SOURCE codegen/inertial_quantities.cu)
 

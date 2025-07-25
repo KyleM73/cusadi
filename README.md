@@ -1,3 +1,6 @@
+# Notes
+may need `sudo apt install nvidia-cuda-toolkit`
+
 <a id="readme-top"></a>
 
 <br />

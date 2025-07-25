@@ -3,9 +3,8 @@ import torch
 import time
 import numpy as np
 import scipy
-from casadi import *
-import casadi
-from cusadi import *
+import casadi as ca
+import cusadi as cu
 import subprocess
 
 REBUILD_CUDA_CODEGEN = True
@@ -13,16 +12,16 @@ N_ENVS_SWEEP = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 1
 N_EVALS = 20
 
 # Load functions for benchmarking
-fn_filepath_1e1 = os.path.join(CUSADI_BENCHMARK_DIR, "fn_1e1.casadi")
-fn_filepath_1e2 = os.path.join(CUSADI_BENCHMARK_DIR, "fn_1e2.casadi")
-fn_filepath_1e3 = os.path.join(CUSADI_BENCHMARK_DIR, "fn_1e3.casadi")
-fn_filepath_1e4 = os.path.join(CUSADI_BENCHMARK_DIR, "fn_1e4.casadi")
-fn_filepath_1e5 = os.path.join(CUSADI_BENCHMARK_DIR, "fn_1e5.casadi")
-fn_1e1 = casadi.Function.load(fn_filepath_1e1)
-fn_1e2 = casadi.Function.load(fn_filepath_1e2)
-fn_1e3 = casadi.Function.load(fn_filepath_1e3)
-fn_1e4 = casadi.Function.load(fn_filepath_1e4)
-fn_1e5 = casadi.Function.load(fn_filepath_1e5)
+fn_filepath_1e1 = os.path.join(cu.CUSADI_BENCHMARK_DIR, "fn_1e1.casadi")
+fn_filepath_1e2 = os.path.join(cu.CUSADI_BENCHMARK_DIR, "fn_1e2.casadi")
+fn_filepath_1e3 = os.path.join(cu.CUSADI_BENCHMARK_DIR, "fn_1e3.casadi")
+fn_filepath_1e4 = os.path.join(cu.CUSADI_BENCHMARK_DIR, "fn_1e4.casadi")
+fn_filepath_1e5 = os.path.join(cu.CUSADI_BENCHMARK_DIR, "fn_1e5.casadi")
+fn_1e1 = ca.Function.load(fn_filepath_1e1)
+fn_1e2 = ca.Function.load(fn_filepath_1e2)
+fn_1e3 = ca.Function.load(fn_filepath_1e3)
+fn_1e4 = ca.Function.load(fn_filepath_1e4)
+fn_1e5 = ca.Function.load(fn_filepath_1e5)
 benchmark_casadi_fns = [fn_1e1, fn_1e2, fn_1e3, fn_1e4, fn_1e5]
 N_INSTRUCTIONS = []
 
@@ -31,25 +30,25 @@ for f in benchmark_casadi_fns:
     N_INSTRUCTIONS.append(f.n_instructions())
 
     # Generate Cusadi functions for benchmarking
-    if (not os.path.isfile(f"{CUSADI_CODEGEN_DIR}/{f.name()}.cu")):
-        generateCUDACodeDouble(f)
+    if (not os.path.isfile(f"{cu.CUSADI_CODEGEN_DIR}/{f.name()}.cu")):
+        cu.generateCUDACodeDouble(f)
 
     # Generate Pytorch functions for benchmarking
-    if (not os.path.isfile(f"{CUSADI_BENCHMARK_DIR}/{f.name()}_PT.py")):
-        generatePytorchCode(f, f"{CUSADI_BENCHMARK_DIR}/{f.name()}_PT.py")
+    if (not os.path.isfile(f"{cu.CUSADI_BENCHMARK_DIR}/{f.name()}_PT.py")):
+        cu.generatePytorchCode(f, f"{cu.CUSADI_BENCHMARK_DIR}/{f.name()}_PT.py")
 
     # Generate CPU compiled functions
-    if (not os.path.isfile(f"{CUSADI_BENCHMARK_DIR}/{f.name()}.so")):
-        c_filepath = f"{CUSADI_BENCHMARK_DIR}/{f.name()}.c"
-        so_filepath = f"{CUSADI_BENCHMARK_DIR}/{f.name()}.so"
+    if (not os.path.isfile(f"{cu.CUSADI_BENCHMARK_DIR}/{f.name()}.so")):
+        c_filepath = f"{cu.CUSADI_BENCHMARK_DIR}/{f.name()}.c"
+        so_filepath = f"{cu.CUSADI_BENCHMARK_DIR}/{f.name()}.so"
         f.generate(f"{f.name()}.c")
         os.system(f"mv {f.name()}.c {c_filepath}")
         os.system(f"gcc -fPIC -shared -O3 -march=native {c_filepath} -o {so_filepath}")
         os.system(f"rm {c_filepath}")
 
 if (REBUILD_CUDA_CODEGEN):
-    generateCMakeLists(benchmark_casadi_fns)
-    os.system(f"cd {CUSADI_BUILD_DIR} && cmake .. && make -j")
+    cu.generateCMakeLists(benchmark_casadi_fns)
+    os.system(f"cd {cu.CUSADI_BUILD_DIR} && cmake .. && make -j")
 
 t_1e1 = {}; t_1e2 = {}; t_1e3 = {}; t_1e4 = {}; t_1e5 = {};
 time_zero_array = np.zeros((len(N_ENVS_SWEEP), N_EVALS))
@@ -71,7 +70,7 @@ def main():
 
     for fn, time in benchmark_data.items():
         fn_name = fn.name()
-        fn_path = f"{CUSADI_BENCHMARK_DIR}/{fn_name}.so"
+        fn_path = f"{cu.CUSADI_BENCHMARK_DIR}/{fn_name}.so"
         for i in range(len(N_ENVS_SWEEP)):
             print("Running benchmarks for ", N_ENVS_SWEEP[i], " environments...")
             N_ENVS = N_ENVS_SWEEP[i]
@@ -80,7 +79,7 @@ def main():
             outputs_GPU = [torch.zeros(N_ENVS, fn.nnz_out(i), device='cuda',
                            dtype=torch.double).contiguous() for i in range(fn.n_out())]
             work_GPU = torch.zeros(N_ENVS, fn.sz_w(), device='cuda', dtype=torch.double).contiguous()
-            fn_cusadi = CusadiFunction(fn, N_ENVS)
+            fn_cusadi = cu.CusadiFunction(fn, N_ENVS)
             for j in range(N_EVALS):
                 time["cusadi"][i, j] = runCusadiBenchmark(fn_cusadi, inputs_GPU)
                 _, time["pytorch"][i, j] = timeFunction(lambda: 
@@ -94,7 +93,7 @@ def main():
         data_MATLAB[benchmark_sizes[i]] = t_data[i]
     data_MATLAB["N_ENVS_SWEEP"] = np.array(N_ENVS_SWEEP)
     data_MATLAB["N_INSTRUCTIONS"] = np.array(N_INSTRUCTIONS)
-    scipy.io.savemat(f"{CUSADI_DATA_DIR}/benchmark_data.mat", data_MATLAB)
+    scipy.io.savemat(f"{cu.CUSADI_DATA_DIR}/benchmark_data.mat", data_MATLAB)
 
 def timeFunction(fn):
     start = torch.cuda.Event(enable_timing=True)
@@ -115,7 +114,7 @@ def runPytorchBenchmark(fn, outputs, inputs, work):
 def runSerialCPUBenchmark(fn_name, fn_path, N_ENVS):
     result_serial = subprocess.run([
         "./evaluate_serial_cpu", fn_name, fn_path, str(N_ENVS)],
-        cwd = CUSADI_BENCHMARK_DIR,
+        cwd = cu.CUSADI_BENCHMARK_DIR,
         capture_output=True,
         text=True)
     return float(result_serial.stdout.strip())
@@ -123,7 +122,7 @@ def runSerialCPUBenchmark(fn_name, fn_path, N_ENVS):
 def runParallelCPUBenchmark(fn_name, fn_path, N_ENVS):
     result_parallel = subprocess.run([
         "./evaluate_parallel_cpu", fn_name, fn_path, str(N_ENVS)],
-        cwd = CUSADI_BENCHMARK_DIR,
+        cwd = cu.CUSADI_BENCHMARK_DIR,
         capture_output=True,
         text=True)
     return float(result_parallel.stdout.strip())
@@ -131,7 +130,7 @@ def runParallelCPUBenchmark(fn_name, fn_path, N_ENVS):
 def runSerialCPUBenchmarkWithTransfer(fn_name, fn_path, N_ENVS):
     result_serial = subprocess.run([
         "./evaluate_serial_cpu_transfer", fn_name, fn_path, str(N_ENVS)],
-        cwd = CUSADI_BENCHMARK_DIR,
+        cwd = cu.CUSADI_BENCHMARK_DIR,
         capture_output=True,
         text=True)
     return float(result_serial.stdout.strip())
@@ -139,7 +138,7 @@ def runSerialCPUBenchmarkWithTransfer(fn_name, fn_path, N_ENVS):
 def runParallelCPUBenchmarkWithTransfer(fn_name, fn_path, N_ENVS):
     result_parallel = subprocess.run([
         "./evaluate_parallel_cpu_transfer", fn_name, fn_path, str(N_ENVS)],
-        cwd = CUSADI_BENCHMARK_DIR,
+        cwd = cu.CUSADI_BENCHMARK_DIR,
         capture_output=True,
         text=True)
     return float(result_parallel.stdout.strip())

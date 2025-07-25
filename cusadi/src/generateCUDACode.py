@@ -4,19 +4,18 @@ from cusadi import *
 from cusadi.src import OP_CUDA_DICT
 import cusadi
 
-def generateCMakeLists(casadi_fns):
+def generateCMakeLists(casadi_fns, dtype_str="double"):
     cmake_filepath = os.path.join(CUSADI_ROOT_DIR, "CMakeLists.txt")
     cmake_file = open(cmake_filepath, "w+")
     cmake_strings = {}
 
     cmake_strings['version'] = "cmake_minimum_required(VERSION 3.15)\n"
-    cmake_strings['project'] = "project(CusADi)\n"
+    cmake_strings['project'] = "project(CusADi CXX CUDA)\n"
     cmake_strings['packages'] = textwrap.dedent(
     """
     # Find CUDA package
     include(CheckLanguage)
     check_language(CUDA)
-    find_package(CUDAToolkit REQUIRED)
     if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     include_directories(${CUDA_INCLUDE_DIRS})
@@ -25,13 +24,13 @@ def generateCMakeLists(casadi_fns):
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
         set(CMAKE_CUDA_ARCHITECTURES 75 86)
     endif()
-    message(${CMAKE_CUDA_ARCHITECTURES})
+    message("CUDA Architectures: " ${CMAKE_CUDA_ARCHITECTURES})
 
     # Set C++ standard
     set(CMAKE_CXX_STANDARD 11)
 
     # Set CUDA flags
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -arch=sm_86 --use_fast_math)  # Adjust architecture as needed
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -O3 -arch=native --use_fast_math)  # Adjust architecture as needed
 
     """)
 
@@ -42,9 +41,10 @@ def generateCMakeLists(casadi_fns):
         print(f.name())
         fn_source_name = f.name().upper() + "_SOURCE"
         fn_filepath = f"codegen/{f.name()}.cu"
+        fn_lib_name = f"{f.name()}" # _{dtype_str}
         str_sources += f"set({fn_source_name} {fn_filepath})\n"
-        str_libraries += f"add_library({f.name()} SHARED ${{{fn_source_name}}})\n"
-        str_libraries += f"target_link_libraries({f.name()})\n"
+        str_libraries += f"add_library({fn_lib_name} SHARED ${{{fn_source_name}}})\n"
+        str_libraries += f"target_link_libraries({fn_lib_name})\n"
 
     cmake_strings['sources'] = str_sources
     cmake_strings['include'] = textwrap.dedent(
@@ -56,6 +56,16 @@ def generateCMakeLists(casadi_fns):
 
     # Add and link libraries for each CasADi function
     cmake_strings['libraries'] = str_libraries
+
+    # Uncomment this to debug CUDA memory errors
+    # If you do that, also comment out the the "Set CUDA flags" line above
+    # cmake_strings['flags'] = textwrap.dedent(
+    # f'''
+    # target_compile_options({fn_lib_name} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    # -Xcompiler -rdynamic -lineinfo -arch=sm_89 --use_fast_math
+    # >)
+    # ''')
+    # From fork https://github.com/ARCaD-Lab-UM/cusadi
 
     # * Write codegen to file
     for cmake_str in cmake_strings.values():
@@ -255,7 +265,7 @@ def generateCUDACodeFloat(f, filepath=None, benchmarking=True, debug_mode=True):
             float *outputs[],
             const int batch_size) {
     ''')
-    str_kernel += f"\n    float work_env[{n_w}];"
+    # str_kernel += f"\n    float work_env[{n_w}];"
     str_kernel +=  "\n    int idx = blockIdx.x * blockDim.x + threadIdx.x;"
     str_kernel +=  "\n    int env_idx = idx * n_w;"
     str_kernel +=  "\n    if (idx < batch_size) {"

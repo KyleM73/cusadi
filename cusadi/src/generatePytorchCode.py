@@ -1,11 +1,12 @@
+import os
 import textwrap
-from casadi import *
-from cusadi import *
+import casadi as ca
+import cusadi as cu
 
 def generatePytorchCode(f, filepath=None):
     print("Generating Pytorch code for CasADi function: ", f.name())
     if filepath is None:
-        codegen_filepath = os.path.join(CUSADI_ROOT_DIR, "codegen", f"{f.name()}.py")
+        codegen_filepath = os.path.join(cu.CUSADI_ROOT_DIR, "codegen", f"{f.name()}.py")
     else:
         codegen_filepath = filepath
     codegen_file = open(codegen_filepath, "w+")
@@ -26,12 +27,12 @@ def generatePytorchCode(f, filepath=None):
     const_instr = [f.instruction_constant(i) for i in range(INSTR_LIMIT)]
 
     # * Codegen for const declarations and indices
-    codegen_strings['header'] = "# ! AUTOMATICALLY GENERATED CODE FOR CUSADI\n"
-    codegen_strings['includes'] = textwrap.dedent(
-    '''
+    codegen_strings["header"] = "# ! AUTOMATICALLY GENERATED CODE FOR CUSADI\n"
+    codegen_strings["includes"] = textwrap.dedent(
+    """
     import torch
 
-    ''')
+    """)
     codegen_strings["nnz_in"] = f"nnz_in = [{','.join(map(str, nnz_in))}]\n"
     codegen_strings["nnz_out"] = f"nnz_out = [{','.join(map(str, nnz_out))}]\n"
     codegen_strings["n_w"] = f"n_w = {n_w}\n\n"
@@ -44,22 +45,22 @@ def generatePytorchCode(f, filepath=None):
         op = operations[k]
         o_idx = output_idx[k]
         i_idx = input_idx[k]
-        if op == OP_CONST:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], const_instr[k])
-        elif op == OP_INPUT:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[1])
-        elif op == OP_OUTPUT:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], o_idx[1], i_idx[0])
-        elif op == OP_SQ:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[0])
-        elif OP_PYTORCH_DICT[op].count("%d") == 3:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[1])
-        elif OP_PYTORCH_DICT[op].count("%d") == 2:
-            str_operations += OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0])
+        if op == ca.OP_CONST:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], const_instr[k])
+        elif op == ca.OP_INPUT:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[1])
+        elif op == ca.OP_OUTPUT:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], o_idx[1], i_idx[0])
+        elif op == ca.OP_SQ:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[0])
+        elif cu.OP_PYTORCH_DICT[op].count("%d") == 3:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0], i_idx[1])
+        elif cu.OP_PYTORCH_DICT[op].count("%d") == 2:
+            str_operations += cu.OP_PYTORCH_DICT[op] % (o_idx[0], i_idx[0])
         else:
-            raise Exception('Unknown CasADi operation: ' + str(op))
+            raise Exception("Unknown CasADi operation: " + str(op))
 
-    codegen_strings['pytorch_operations'] = str_operations
+    codegen_strings["pytorch_operations"] = str_operations
 
     # * Write codegen to file
     for cg_str in codegen_strings.values():
