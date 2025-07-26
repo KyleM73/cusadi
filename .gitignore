@@ -5,7 +5,7 @@
 *.so
 
 # Generated CMakeLists.txt file
-*CMakeLists.txt
+**/CMakeLists.txt
 *build/
 
 # Virtual environments
