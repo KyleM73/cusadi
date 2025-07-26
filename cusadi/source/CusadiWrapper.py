@@ -66,15 +66,14 @@ if __name__ == "__main__":
         z = x + y
         return ca.Function("my_function", [x, y], [z])
 
-    mode = "decorator" # Options["decorator", "wrapper"]
+    mode = "wrapper" # Options["decorator", "wrapper"]
     N = 5
     # decorator
     if mode == "decorator":
         my_func = cusadi_fn(num_envs=N)(casadi_func)
     # wrapper
     else:
-        my_casadi_func = casadi_func()
-        my_func = CusadiWrapper(my_casadi_func, num_envs=N)
+        my_func = CusadiWrapper(casadi_func, num_envs=N)
 
     device = "cuda"
     inputs = [
