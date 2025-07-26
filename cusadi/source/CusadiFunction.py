@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 import ctypes
+import casadi as ca
 from cusadi import CUSADI_BUILD_DIR
 
 class CusadiFunction:
@@ -14,7 +15,7 @@ class CusadiFunction:
     outputs_dense = []
 
     # Private variables:
-    _device = 'cuda'
+    _device = "cuda"
     _fn_library = None
     _work_tensor = []
     _input_tensors = []
@@ -29,7 +30,7 @@ class CusadiFunction:
     def __init__(self, fn_casadi, num_instances):
         assert torch.cuda.is_available()
         lib_filepath = os.path.join(CUSADI_BUILD_DIR, f"lib{fn_casadi.name()}.so")
-        self.fn_casadi = fn_casadi
+        self.fn_casadi: ca.Function = fn_casadi
         self.fn_name = fn_casadi.name()
         self.num_instances = num_instances
         self._fn_library = ctypes.CDLL(lib_filepath)
@@ -54,9 +55,11 @@ class CusadiFunction:
         col_idx = torch.tensor((self.fn_casadi.sparsity_out(out_idx).get_triplet()[1]), device=self._device) \
             .repeat(self.num_instances)
         dim_dense = (self.num_instances, self.fn_casadi.size1_out(out_idx), self.fn_casadi.size2_out(out_idx))
-        return torch.sparse_coo_tensor(torch.vstack((env_idx, row_idx, col_idx)),
-                                       self.outputs_sparse[out_idx].reshape(-1), 
-                                       dim_dense).to_dense()
+        return torch.sparse_coo_tensor(
+            torch.vstack((env_idx, row_idx, col_idx)),
+            self.outputs_sparse[out_idx].reshape(-1), 
+            dim_dense
+        ).to_dense()
     
     def checkInputDimensions(self, inputs):
         self.input_CPU = [tensor[0, :].cpu().numpy() for tensor in inputs]

@@ -8,7 +8,7 @@ import cusadi as cu
 class CusadiWrapper:
     def __init__(self, fn: ca.Function, num_envs: int) -> None:
         cu.generateCUDACodeDouble(fn)
-        cu.generatePytorchCode(fn)
+        # cu.generatePytorchCode(fn)
         cu.generateCMakeLists(fn, dtype_str="double")
         t_compile = time.time()
         print("Compiling CUDA code...")
@@ -31,7 +31,7 @@ class CusadiWrapper:
 def cusadi(num_envs: int) -> Callable:
     def decorator(fn: ca.Function) -> Callable:
         cu.generateCUDACodeDouble(fn)
-        cu.generatePytorchCode(fn)
+        # cu.generatePytorchCode(fn)
         cu.generateCMakeLists([fn], dtype_str="double")
         
         # Compile the CUDA code
@@ -47,10 +47,10 @@ def cusadi(num_envs: int) -> Callable:
         cusadi_fn = cu.CusadiFunction(fn, num_envs)
         
         # Define the wrapped function
-        def wrapped(inputs: list) -> torch.Tensor:
+        def wrapped(inputs: list[torch.Tensor]) -> list[torch.Tensor]:
             cusadi_fn.evaluate(inputs)
             torch.cuda.synchronize()  # Ensure GPU computations are complete
-            return cusadi_fn.getDenseOutput(out_idx=0)
+            return cusadi_fn.outputs_sparse
         
         return wrapped
     return decorator
@@ -60,26 +60,18 @@ if __name__ == "__main__":
 
     def casadi_func() -> ca.Function:
         x = ca.SX.sym("x", 2) # type: ignore
-        # y = ca.SX.sym("y", 2) # type: ignore
-        z = x + 1 # + y
-        # return ca.Function("my_function", [x, y], [z])
-        return ca.Function("my_function", [x], [z])
+        y = ca.SX.sym("y", 2) # type: ignore
+        z = x + y
+        return ca.Function("my_function", [x, y], [z])
 
-    # casadi_fn = casadi_func()
-    # casadi_inputs = [ca.DM([1.0, 2.0]), ca.DM([5.0, 6.0])]
-    # casadi_output = casadi_fn(*casadi_inputs)
-    # print("CasADi output:", casadi_output)
-
-    my_func = cusadi(1)(casadi_func())
+    N = 1
+    my_func = cusadi(N)(casadi_func())
 
     device = "cuda"
-    # inputs = [
-    #     torch.tensor([[1.0, 2.0], [3.0, 4.0]], device=device),
-    #     torch.tensor([[5.0, 6.0], [7.0, 8.0]], device=device),
-    # ]
     inputs = [
-        torch.tensor([[1.0, 2.0]], device=device).view(2, 1),
-        torch.tensor([[5.0, 6.0]], device=device).view(2, 1),
+        torch.rand(N, casadi_func().nnz_in(i), device=device, dtype=torch.double).contiguous()
+            for i in range(casadi_func().n_in())
     ]
-    output = my_func([inputs[0]])
-    print(output)
+    outputs = my_func(inputs)
+    print(inputs)
+    print(outputs)
