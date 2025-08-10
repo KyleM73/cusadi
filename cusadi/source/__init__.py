@@ -1,6 +1,6 @@
 from .CusadiFunction import CusadiFunction
 from .CusadiOperations import OP_CUDA_DICT, OP_PYTORCH_DICT
 from .CusadiWrapper import CusadiWrapper
-from .generateCUDACode import generateCUDACodeDouble, generateCUDACodeFloat, generateCMakeLists
+from .generateCUDACode import generateCUDACode, generateCUDACodeDouble, generateCUDACodeFloat, generateCMakeLists
 from .generatePytorchCode import generatePytorchCode
 from .benchmark_functions import *
